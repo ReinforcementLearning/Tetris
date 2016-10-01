@@ -6,6 +6,7 @@
 import random, time, pygame, sys
 from pygame.locals import *
 from agent import AGENT
+from copy import deepcopy
 
 FPS = 25
 WINDOWWIDTH = 640
@@ -171,7 +172,7 @@ def main():
             pygame.mixer.music.load('tetrisb.mid')
         else:
             pygame.mixer.music.load('tetrisc.mid')
-        pygame.mixer.music.play(-1, 0.0)
+        pygame.mixer.music.play(-1, 0.0)   
         runGame()
         pygame.mixer.music.stop()
         showTextScreen('Game Over')
@@ -187,6 +188,7 @@ def runGame():
     movingLeft = False
     movingRight = False
     score = 0
+    reward = 0
     level, fallFreq = calculateLevelAndFallFreq(score)
     
     # make agent for RL
@@ -206,9 +208,9 @@ def runGame():
                 return # can't fit a new piece on the board, so game over
 
         checkForQuit()
-        
-        action = agent.getAction()
-        print "get action"
+        board_copy = deepcopy(board)
+        board_copy = addToBoard(board_copy, fallingPiece)
+        action = agent.getAction(board_copy)
         
         # event handling loop
             
@@ -235,7 +237,6 @@ def runGame():
                 fallingPiece['x'] -= 1
                 movingLeft = True
                 movingRight = False
-                print "What the hell"+str(action)
                 lastMoveSidewaysTime = time.time()
 
             elif (action == "K_RIGHT") and isValidPosition(board, fallingPiece, adjX=1):
@@ -262,7 +263,7 @@ def runGame():
                 lastMoveDownTime = time.time()
 
                 # move the current piece all the way down
-            elif action == K_SPACE:
+            elif action == "K_SPACE":
                 movingDown = False
                 movingLeft = False
                 movingRight = False
@@ -282,8 +283,10 @@ def runGame():
         if movingDown and time.time() - lastMoveDownTime > MOVEDOWNFREQ and isValidPosition(board, fallingPiece, adjY=1):
             fallingPiece['y'] += 1
             lastMoveDownTime = time.time()
-
-        agent.giveData()
+        
+        
+        board_copy = deepcopy(board)
+        board_copy = addToBoard(board_copy, fallingPiece)
         
         # let the piece fall if it is time to fall
         if time.time() - lastFallTime > fallFreq:
@@ -291,14 +294,17 @@ def runGame():
             if not isValidPosition(board, fallingPiece, adjY=1):
                 # falling piece has landed, set it on the board
                 addToBoard(board, fallingPiece)
-                score += removeCompleteLines(board)
+                reward = removeCompleteLines(board)
+                score += reward
                 level, fallFreq = calculateLevelAndFallFreq(score)
                 fallingPiece = None
             else:
                 # piece did not land, just move the piece down
                 fallingPiece['y'] += 1
                 lastFallTime = time.time()
-
+        
+        agent.giveData(board_copy, reward)
+        
         # drawing everything on the screen
         DISPLAYSURF.fill(BGCOLOR)
         drawBoard(board)
@@ -351,9 +357,9 @@ def showTextScreen(text):
     pressKeyRect.center = (int(WINDOWWIDTH / 2), int(WINDOWHEIGHT / 2) + 100)
     DISPLAYSURF.blit(pressKeySurf, pressKeyRect)
 
-    while checkForKeyPress() == None:
-        pygame.display.update()
-        FPSCLOCK.tick()
+    #while checkForKeyPress() == None:
+    pygame.display.update()
+    FPSCLOCK.tick()
 
 
 def checkForQuit():
@@ -389,7 +395,7 @@ def addToBoard(board, piece):
         for y in range(TEMPLATEHEIGHT):
             if PIECES[piece['shape']][piece['rotation']][y][x] != BLANK:
                 board[x + piece['x']][y + piece['y']] = piece['color']
-
+    return board
 
 def getBlankBoard():
     # create and return a new blank board data structure
