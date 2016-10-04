@@ -13,20 +13,25 @@ def bias_variable(shape):
 
 
 class AGENT():
-    def __init__(self, gamma = 0.99, LR = 0.01, epsilon = 0.9):
+    def __init__(self, gamma = 0.99, LR = 0.01, epsilon = 0.9, resume = False):
         self.actions = ["KEYUP", "K_UP", "K_DOWN", "K_LEFT", "K_RIGHT"]
         self.gamma = gamma
         self.LR = LR
         self.epsilon = epsilon
+        self.is_resume = resume
         
         self.state, self.Q1 = self.makeNetwork()
         self.next_state, self.Q2 = self.makeNetwork()
         self.rwd, self.act, self.train = self.trainNetwork()
         
+        
         self.sess = tf.InteractiveSession()
         self.sess.run(tf.initialize_all_variables())
         self.saver = tf.train.Saver()
         
+        if self.is_resume == True:
+            self.restoreNetwork()
+            
         
     def getAction(self, board):
         state = self.preprocessing(board)
@@ -41,6 +46,7 @@ class AGENT():
         
     def giveData(self, board, score):
         board_train =  self.preprocessing(board)
+        
         
         
     def preprocessing(self, board):
@@ -83,3 +89,9 @@ class AGENT():
         
         return rwd, act, train_step
              
+             
+    def saveNetwork(self):
+        self.saver.save(self.sess, "Tetris.ckpt")
+        
+    def restoreNetwork(self):
+        self.saver.restor(self.sess, "Tetris.ckpt")

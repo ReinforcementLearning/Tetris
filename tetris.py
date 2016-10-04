@@ -166,7 +166,7 @@ def main():
     BIGFONT = pygame.font.Font('freesansbold.ttf', 100)
     pygame.display.set_caption('Tetromino')
 
-    showTextScreen('Tetromino')
+    showTextScreen("RL_Code")
     while True: # game loop
         if random.randint(0, 1) == 0:
             pygame.mixer.music.load('tetrisb.mid')
@@ -208,12 +208,14 @@ def runGame():
                 return # can't fit a new piece on the board, so game over
 
         checkForQuit()
+        
+        # copy the board for agent
         board_copy = deepcopy(board)
         board_copy = addToBoard(board_copy, fallingPiece)
         action = agent.getAction(board_copy)
         
+        
         # event handling loop
-            
         if action == "KEYUP":
             if (action == K_p):
                 # Pausing the game
@@ -224,11 +226,11 @@ def runGame():
                 lastFallTime = time.time()
                 lastMoveDownTime = time.time()
                 lastMoveSidewaysTime = time.time()
-            elif (action == K_LEFT or action == K_a):
+            elif (action == "K_LEFT"):
                 movingLeft = False
-            elif (action == K_RIGHT or action == K_d):
+            elif (action == "K_RIGHT"):
                 movingRight = False
-            elif (action == K_DOWN or action == K_s):
+            elif (action == "K_DOWN"):
                 movingDown = False
 
         else:
@@ -285,9 +287,6 @@ def runGame():
             lastMoveDownTime = time.time()
         
         
-        board_copy = deepcopy(board)
-        board_copy = addToBoard(board_copy, fallingPiece)
-        
         # let the piece fall if it is time to fall
         if time.time() - lastFallTime > fallFreq:
             # see if the piece has landed
@@ -302,6 +301,10 @@ def runGame():
                 # piece did not land, just move the piece down
                 fallingPiece['y'] += 1
                 lastFallTime = time.time()
+                
+        board_copy = deepcopy(board)
+        if fallingPiece != None:
+            board_copy = addToBoard(board_copy, fallingPiece)
         
         agent.giveData(board_copy, reward)
         
