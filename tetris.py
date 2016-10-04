@@ -159,6 +159,10 @@ PIECES = {'S': S_SHAPE_TEMPLATE,
 
 def main():
     global FPSCLOCK, DISPLAYSURF, BASICFONT, BIGFONT
+    
+    # make agent for RL
+    agent = AGENT()
+    
     pygame.init()
     FPSCLOCK = pygame.time.Clock()
     DISPLAYSURF = pygame.display.set_mode((WINDOWWIDTH, WINDOWHEIGHT))
@@ -173,12 +177,15 @@ def main():
         else:
             pygame.mixer.music.load('tetrisc.mid')
         pygame.mixer.music.play(-1, 0.0)   
-        runGame()
+        runGame(agent)
+        
+        # save agent's network
+        agent.saveNetwork()
         pygame.mixer.music.stop()
         showTextScreen('Game Over')
 
 
-def runGame():
+def runGame(agent):
     # setup variables for the start of the game
     board = getBlankBoard()
     lastMoveDownTime = time.time()
@@ -190,9 +197,6 @@ def runGame():
     score = 0
     reward = 0
     level, fallFreq = calculateLevelAndFallFreq(score)
-    
-    # make agent for RL
-    agent = AGENT()
 
     fallingPiece = getNewPiece()
     nextPiece = getNewPiece()
@@ -212,6 +216,9 @@ def runGame():
         # copy the board for agent
         board_copy = deepcopy(board)
         board_copy = addToBoard(board_copy, fallingPiece)
+        
+        # give state(s) for learning
+        agent.giveState(board_copy)
         action = agent.getAction(board_copy)
         
         
@@ -302,11 +309,14 @@ def runGame():
                 fallingPiece['y'] += 1
                 lastFallTime = time.time()
                 
+        # give reward and next state(r,s') for learning
         board_copy = deepcopy(board)
         if fallingPiece != None:
             board_copy = addToBoard(board_copy, fallingPiece)
+        agent.giveNextState(board_copy, reward)
         
-        agent.giveData(board_copy, reward)
+        # training agent
+        agent.training()
         
         # drawing everything on the screen
         DISPLAYSURF.fill(BGCOLOR)
