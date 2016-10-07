@@ -110,8 +110,24 @@ class AGENT():
         loss = tf.reduce_mean(tf.clip_by_value(tf.square(values1 - values2), 1e-10, 1.0))
         train_step = tf.train.AdamOptimizer(self.LR).minimize(loss)       
         
+        self.trajectory = []
+        
         return rwd, act, train_step
-             
+    
+    def getHeuristicScore(self, board_):
+        board = self.preprocessing(board_)
+        score = 0
+        
+        for i in range(10):
+            for j in range(19):
+                if (board[i][j], board[i][j+1]) == (1,0):
+                    score -= 1
+            for j in range(18):
+                if (board[i][j], board[i][j+1], board[i][j+2]) == (1,0,0):
+                    score -= 1
+                    
+        return score
+    
              
     def saveNetwork(self):
         self.saver.save(self.sess, "Tetris.ckpt")

@@ -300,7 +300,7 @@ def runGame(agent):
             if not isValidPosition(board, fallingPiece, adjY=1):
                 # falling piece has landed, set it on the board
                 addToBoard(board, fallingPiece)
-                reward = removeCompleteLines(board)
+                reward = (removeCompleteLines(board)**2)*10
                 score += reward
                 level, fallFreq = calculateLevelAndFallFreq(score)
                 fallingPiece = None
@@ -309,11 +309,19 @@ def runGame(agent):
                 fallingPiece['y'] += 1
                 lastFallTime = time.time()
                 
-        # give reward and next state(r,s') for learning
+        
         board_copy = deepcopy(board)
+        
+        
+        # get Score
+        reward += agent.getHeuristicScore(board_copy)
+        
+        # give reward and next state(r,s') for learning
         if fallingPiece != None:
             board_copy = addToBoard(board_copy, fallingPiece)
+        
         agent.giveNextState(board_copy, reward)
+        reward = 0
         
         # training agent
         agent.training()
@@ -388,7 +396,7 @@ def calculateLevelAndFallFreq(score):
     # Based on the score, return the level the player is on and
     # how many seconds pass until a falling piece falls one space.
     level = int(score / 10) + 1
-    fallFreq = 0.27 - (level * 0.02)
+    fallFreq = 0.05 - (level * 0.02)
     return level, fallFreq
 
 def getNewPiece():
