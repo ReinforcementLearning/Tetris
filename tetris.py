@@ -224,10 +224,10 @@ def runGame(agent):
         board_copy = deepcopy(board)
         board_copy = addToBoard(board_copy, fallingPiece)
         
-        # give state(s) for learning
+   
         agent.giveState(board_copy)
         x_, rot_ = agent.getAction(board_copy)
-        if (10 - x_ > TEMPLATEWIDTH):
+        if ( x_ > TEMPLATEWIDTH):
             x_ -= TEMPLATEWIDTH
             
         fallingPiece['x'] = x_
