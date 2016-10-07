@@ -3,27 +3,45 @@ import numpy as np
 import tensorflow as tf
 
 
-def weight_variable(shape):
-    initial = tf.truncated_normal(shape, stddev=0.05)
-    return tf.Variable(initial)
+def weight_variable(shape, trainable = True):
+    initial = tf.truncated_normal(shape, stddev=0.03)
+    return tf.Variable(initial, trainable = trainable)
 
-def bias_variable(shape):
+def bias_variable(shape, trainable = True):
     initial = tf.constant(0.1, shape=shape)
-    return tf.Variable(initial)
-
+    return tf.Variable(initial, trainable = trainable)
 
 class AGENT():
-    def __init__(self, gamma = 0.99, LR = 0.01, epsilon = 0.9, resume = False):
+    def __init__(self, gamma = 0.99, LR = 0.01, epsilon = 0.9, epsilon_thres = 1e-4, epsilon_decay_rate = 0.99, 
+                 resume = False):
         self.actions = ["KEYUP", "K_UP", "K_DOWN", "K_LEFT", "K_RIGHT"]
         self.gamma = gamma
         self.LR = LR
         self.epsilon = epsilon
+        self.epsilon_thres = epsilon_thres
+        self.epsilon_decay_rate = epsilon_decay_rate
         self.is_resume = resume
         self.trajectory = []
         
-        self.state, self.Q1 = self.makeNetwork()
-        self.next_state, self.Q2 = self.makeNetwork()
+        self.W1 = weight_variable([200, 200])
+        self.b1 = bias_variable([200])
+        self.W2 = weight_variable([200, 150])
+        self.b2 = bias_variable([150])
+        self.W3 = weight_variable([150, 5])
+        self.b3 = bias_variable([5])
+        
+        self.t_W1 = tf.Variable(self.W1.initialized_value(), trainable = False)
+        self.t_b1 = tf.Variable(self.b1.initialized_value(), trainable = False)
+        self.t_W2 = tf.Variable(self.W2.initialized_value(), trainable = False)
+        self.t_b2 = tf.Variable(self.b2.initialized_value(), trainable = False)
+        self.t_W3 = tf.Variable(self.W3.initialized_value(), trainable = False)
+        self.t_b3 = tf.Variable(self.b3.initialized_value(), trainable = False)
+        
+        self.state, self.Q1 = self.getQFunction()
+        self.next_state, self.Q2 = self.getTargetQFunction()
         self.rwd, self.act, self.train = self.trainNetwork()
+        
+        self.update_targetq = self.assignTargetQ()
         
         self.sess = tf.InteractiveSession()
         self.sess.run(tf.initialize_all_variables())
@@ -31,7 +49,6 @@ class AGENT():
         
         if self.is_resume == True:
             self.restoreNetwork()
-            
         
     def getAction(self, board):
         state = self.preprocessing(board)
@@ -82,22 +99,13 @@ class AGENT():
                                                self.rwd: r,
                                                self.next_state: s_})
     
-    def makeNetwork(self):
+    def getQFunction(self):
         state = tf.placeholder(tf.float32, [None, 200])
         
-        W1 = weight_variable([200, 200])
-        b1 = bias_variable([200])
+        h1 = tf.nn.relu(tf.matmul(state, self.W1) + self.b1)
+        h2 = tf.nn.relu(tf.matmul(h1, self.W2) + self.b2)
         
-        W2 = weight_variable([200, 150])
-        b2 = bias_variable([150])
-        
-        W3 = weight_variable([150, 5])
-        b3 = bias_variable([5])
-        
-        h1 = tf.nn.relu(tf.matmul(state, W1) + b1)
-        h2 = tf.nn.relu(tf.matmul(h1, W2) + b2)
-        
-        Q = tf.matmul(h2, W3) + b3
+        Q = tf.matmul(h2, self.W3) + self.b3
         
         return state, Q
         
@@ -125,10 +133,41 @@ class AGENT():
             for j in range(18):
                 if (board[i][j], board[i][j+1], board[i][j+2]) == (1,0,0):
                     score -= 1
+            for j in range(17):
+                if (board[i][j], board[i][j+1], board[i][j+2], board[i][j+3]) == (1,0,0,0):
+                    score -= 1
                     
         return score
     
-             
+    def getTargetQFunction(self):
+        state = tf.placeholder(tf.float32, [None, 200])
+        
+        h1 = tf.nn.relu(tf.matmul(state, self.t_W1) + self.t_b1)
+        h2 = tf.nn.relu(tf.matmul(h1, self.t_W2) + self.t_b2)
+        
+        Q = tf.matmul(h2, self.t_W3) + self.t_b3
+        
+        return state, Q
+    
+    def assignTargetQ(self):
+        assignment = []
+        assignment.append(self.t_W1.assign(self.W1))
+        assignment.append(self.t_b1.assign(self.b1))
+        assignment.append(self.t_W2.assign(self.W2))
+        assignment.append(self.t_b2.assign(self.b2))
+        assignment.append(self.t_W3.assign(self.W3))
+        assignment.append(self.t_b3.assign(self.b3))
+        
+        return assignment
+    
+    def decayEpsilon(self):
+        self.epsilon *= self.epsilon_decay_rate
+        if self.epsilon < self.epsilon_thres:
+            self.epsilon = self.epsilon_thres
+        
+    def updateTargetQ(self):
+        self.sess.run(self.update_targetq)
+                    
     def saveNetwork(self):
         self.saver.save(self.sess, "Tetris.ckpt")
         

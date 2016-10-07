@@ -159,6 +159,7 @@ PIECES = {'S': S_SHAPE_TEMPLATE,
 
 def main():
     global FPSCLOCK, DISPLAYSURF, BASICFONT, BIGFONT
+    episode = 0
     
     # make agent for RL
     agent = AGENT()
@@ -183,30 +184,35 @@ def main():
         agent.saveNetwork()
         pygame.mixer.music.stop()
         showTextScreen('Game Over')
-
+        episode += 1
+        
+        if episode % 100 == 0:
+            agent.decayEpsilon()
+            
+            if episode % 500 == 0:
+                agent.updateTargetQ()
 
 def runGame(agent):
     # setup variables for the start of the game
     board = getBlankBoard()
-    lastMoveDownTime = time.time()
-    lastMoveSidewaysTime = time.time()
-    lastFallTime = time.time()
     movingDown = False # note: there is no movingUp variable
     movingLeft = False
     movingRight = False
     score = 0
     reward = 0
-    level, fallFreq = calculateLevelAndFallFreq(score)
+    pre_reward = 0
+    step_size = 1
 
     fallingPiece = getNewPiece()
     nextPiece = getNewPiece()
 
     while True: # game loop
+        
+        
         if fallingPiece == None:
             # No falling piece in play, so start a new piece at the top
             fallingPiece = nextPiece
             nextPiece = getNewPiece()
-            lastFallTime = time.time() # reset lastFallTime
 
             if not isValidPosition(board, fallingPiece):
                 return # can't fit a new piece on the board, so game over
@@ -230,9 +236,7 @@ def runGame(agent):
                 pygame.mixer.music.stop()
                 showTextScreen('Paused') # pause until a key press
                 pygame.mixer.music.play(-1, 0.0)
-                lastFallTime = time.time()
-                lastMoveDownTime = time.time()
-                lastMoveSidewaysTime = time.time()
+
             elif (action == "K_LEFT"):
                 movingLeft = False
             elif (action == "K_RIGHT"):
@@ -269,7 +273,6 @@ def runGame(agent):
                 movingDown = True
                 if isValidPosition(board, fallingPiece, adjY=1):
                     fallingPiece['y'] += 1
-                lastMoveDownTime = time.time()
 
                 # move the current piece all the way down
             elif action == "K_SPACE":
@@ -287,27 +290,21 @@ def runGame(agent):
                 fallingPiece['x'] -= 1
             elif movingRight and isValidPosition(board, fallingPiece, adjX=1):
                 fallingPiece['x'] += 1
-            lastMoveSidewaysTime = time.time()
 
-        if movingDown and time.time() - lastMoveDownTime > MOVEDOWNFREQ and isValidPosition(board, fallingPiece, adjY=1):
+        if movingDown and isValidPosition(board, fallingPiece, adjY=1):
             fallingPiece['y'] += 1
-            lastMoveDownTime = time.time()
         
-        
-        # let the piece fall if it is time to fall
-        if time.time() - lastFallTime > fallFreq:
+        if step_size % 2 == 0:
             # see if the piece has landed
             if not isValidPosition(board, fallingPiece, adjY=1):
                 # falling piece has landed, set it on the board
                 addToBoard(board, fallingPiece)
                 reward = (removeCompleteLines(board)**2)*10
                 score += reward
-                level, fallFreq = calculateLevelAndFallFreq(score)
                 fallingPiece = None
             else:
                 # piece did not land, just move the piece down
                 fallingPiece['y'] += 1
-                lastFallTime = time.time()
                 
         
         board_copy = deepcopy(board)
@@ -320,22 +317,27 @@ def runGame(agent):
         if fallingPiece != None:
             board_copy = addToBoard(board_copy, fallingPiece)
         
-        agent.giveNextState(board_copy, reward)
+        agent.giveNextState(board_copy, reward - pre_reward)
+        
+        # reset reward
+        pre_reward = reward
         reward = 0
         
         # training agent
         agent.training()
         
+        
         # drawing everything on the screen
         DISPLAYSURF.fill(BGCOLOR)
         drawBoard(board)
-        drawStatus(score, level)
+        drawStatus(score, 0)
         drawNextPiece(nextPiece)
         if fallingPiece != None:
             drawPiece(fallingPiece)
 
         pygame.display.update()
         FPSCLOCK.tick(FPS)
+        step_size += 1
 
 
 def makeTextObjs(text, font, color):
