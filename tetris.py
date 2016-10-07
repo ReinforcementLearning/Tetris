@@ -4,9 +4,11 @@
 # Released under a "Simplified BSD" license
 
 import random, time, pygame, sys
+import numpy as np
 from pygame.locals import *
 from agent import AGENT
 from copy import deepcopy
+
 
 FPS = 25
 WINDOWWIDTH = 640
@@ -159,26 +161,27 @@ PIECES = {'S': S_SHAPE_TEMPLATE,
 
 def main():
     global FPSCLOCK, DISPLAYSURF, BASICFONT, BIGFONT
-    episode = 0
+    episode, cur_score = 0, 0
     
     # make agent for RL
-    agent = AGENT()
+    agent = AGENT(resume = False)
     
     pygame.init()
+    
     FPSCLOCK = pygame.time.Clock()
     DISPLAYSURF = pygame.display.set_mode((WINDOWWIDTH, WINDOWHEIGHT))
     BASICFONT = pygame.font.Font('freesansbold.ttf', 18)
     BIGFONT = pygame.font.Font('freesansbold.ttf', 100)
     pygame.display.set_caption('Tetromino')
-
     showTextScreen("RL_Code")
+    
     while True: # game loop
         if random.randint(0, 1) == 0:
             pygame.mixer.music.load('tetrisb.mid')
         else:
             pygame.mixer.music.load('tetrisc.mid')
         pygame.mixer.music.play(-1, 0.0)   
-        runGame(agent)
+        cur_score, loss_avg = runGame(agent)
         
         # save agent's network
         agent.saveNetwork()
@@ -186,7 +189,9 @@ def main():
         showTextScreen('Game Over')
         episode += 1
         
-        if episode % 100 == 0:
+        print "Episode {} finished. score : {}, loss_avg = {}".format(episode, cur_score, loss_avg)
+        print agent.sess.run(agent.Q2, feed_dict = {agent.next_state : np.ones([1,200])})
+        if episode % 25 == 0:
             agent.decayEpsilon()
             
             if episode % 500 == 0:
@@ -201,6 +206,7 @@ def runGame(agent):
     score = 0
     reward = 0
     pre_reward = 0
+    loss = 0
     step_size = 1
 
     fallingPiece = getNewPiece()
@@ -215,7 +221,7 @@ def runGame(agent):
             nextPiece = getNewPiece()
 
             if not isValidPosition(board, fallingPiece):
-                return # can't fit a new piece on the board, so game over
+                return score, loss/step_size # can't fit a new piece on the board, so game over
 
         checkForQuit()
         
@@ -294,7 +300,7 @@ def runGame(agent):
         if movingDown and isValidPosition(board, fallingPiece, adjY=1):
             fallingPiece['y'] += 1
         
-        if step_size % 2 == 0:
+        if step_size % 3 == 0:
             # see if the piece has landed
             if not isValidPosition(board, fallingPiece, adjY=1):
                 # falling piece has landed, set it on the board
@@ -324,7 +330,7 @@ def runGame(agent):
         reward = 0
         
         # training agent
-        agent.training()
+        loss += agent.training()
         
         
         # drawing everything on the screen
@@ -336,7 +342,8 @@ def runGame(agent):
             drawPiece(fallingPiece)
 
         pygame.display.update()
-        FPSCLOCK.tick(FPS)
+        FPSCLOCK.tick()
+        
         step_size += 1
 
 
@@ -382,7 +389,7 @@ def showTextScreen(text):
 
     #while checkForKeyPress() == None:
     pygame.display.update()
-    FPSCLOCK.tick()
+    #FPSCLOCK.tick()
 
 
 def checkForQuit():

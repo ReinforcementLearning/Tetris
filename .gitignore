@@ -1,0 +1,6 @@
+*.ckpt
+*.meta
+checkpoint
+*.project
+*.pydevproject
+*.python-version

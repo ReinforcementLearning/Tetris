@@ -23,23 +23,29 @@ class AGENT():
         self.is_resume = resume
         self.trajectory = []
         
-        self.W1 = weight_variable([200, 200])
-        self.b1 = bias_variable([200])
-        self.W2 = weight_variable([200, 150])
-        self.b2 = bias_variable([150])
-        self.W3 = weight_variable([150, 5])
-        self.b3 = bias_variable([5])
+        self.conv_W1 = weight_variable([5, 5, 1, 16])
+        self.conv_b1 = bias_variable([16])
+        self.conv_W2 = weight_variable([4, 4, 16, 32])
+        self.conv_b2 = bias_variable([32])
+        self.W1 = weight_variable([5*10*32, 256])
+        self.b1 = bias_variable([256])
+        self.W2 = weight_variable([256, 5])
+        self.b2 = bias_variable([5])
         
+        
+        self.t_conv_W1 = tf.Variable(self.conv_W1.initialized_value(), trainable = False)
+        self.t_conv_b1 = tf.Variable(self.conv_b1.initialized_value(), trainable = False)
+        self.t_conv_W2 = tf.Variable(self.conv_W2.initialized_value(), trainable = False)
+        self.t_conv_b2 = tf.Variable(self.conv_b2.initialized_value(), trainable = False)
         self.t_W1 = tf.Variable(self.W1.initialized_value(), trainable = False)
         self.t_b1 = tf.Variable(self.b1.initialized_value(), trainable = False)
         self.t_W2 = tf.Variable(self.W2.initialized_value(), trainable = False)
         self.t_b2 = tf.Variable(self.b2.initialized_value(), trainable = False)
-        self.t_W3 = tf.Variable(self.W3.initialized_value(), trainable = False)
-        self.t_b3 = tf.Variable(self.b3.initialized_value(), trainable = False)
+        
         
         self.state, self.Q1 = self.getQFunction()
         self.next_state, self.Q2 = self.getTargetQFunction()
-        self.rwd, self.act, self.train = self.trainNetwork()
+        self.rwd, self.act, self.loss, self.train = self.trainNetwork()
         
         self.update_targetq = self.assignTargetQ()
         
@@ -94,18 +100,25 @@ class AGENT():
         r = np.array(self.trajectory[2])
         s_ = np.array(self.trajectory[3])
         
-        self.sess.run(self.train, feed_dict = {self.state: s,
-                                               self.act: a,
-                                               self.rwd: r,
-                                               self.next_state: s_})
+        _, step_loss = self.sess.run([self.train, self.loss], feed_dict = {self.state: s,
+                                                                           self.act: a,
+                                                                           self.rwd: r,
+                                                                           self.next_state: s_})
+        return step_loss
     
     def getQFunction(self):
         state = tf.placeholder(tf.float32, [None, 200])
+        state_image = tf.reshape(state, [-1, 10, 20, 1])
         
-        h1 = tf.nn.relu(tf.matmul(state, self.W1) + self.b1)
-        h2 = tf.nn.relu(tf.matmul(h1, self.W2) + self.b2)
+        conv_h1 = tf.nn.relu(tf.nn.conv2d(state_image, self.conv_W1, strides=[1,1,1,1], padding='SAME') + self.conv_b1)
+        conv_h2 = tf.nn.relu(tf.nn.conv2d(conv_h1, self.conv_W2, strides=[1,2,2,1], padding='SAME') + self.conv_b2)
         
-        Q = tf.matmul(h2, self.W3) + self.b3
+        conv_h2_flat = tf.reshape(conv_h2, [-1, 50*32])
+        
+        h1 = tf.nn.relu(tf.matmul(conv_h2_flat, self.W1) + self.b1)
+       
+        Q = tf.nn.relu(tf.matmul(h1, self.W2) + self.b2)
+        
         
         return state, Q
         
@@ -120,7 +133,7 @@ class AGENT():
         
         self.trajectory = []
         
-        return rwd, act, train_step
+        return rwd, act, loss, train_step
     
     def getHeuristicScore(self, board_):
         board = self.preprocessing(board_)
@@ -141,22 +154,29 @@ class AGENT():
     
     def getTargetQFunction(self):
         state = tf.placeholder(tf.float32, [None, 200])
+        state_image = tf.reshape(state, [-1, 10, 20, 1])
         
-        h1 = tf.nn.relu(tf.matmul(state, self.t_W1) + self.t_b1)
-        h2 = tf.nn.relu(tf.matmul(h1, self.t_W2) + self.t_b2)
+        conv_h1 = tf.nn.relu(tf.nn.conv2d(state_image, self.t_conv_W1, strides=[1,1,1,1], padding='SAME') + self.t_conv_b1)
+        conv_h2 = tf.nn.relu(tf.nn.conv2d(conv_h1, self.t_conv_W2, strides=[1,2,2,1], padding='SAME') + self.t_conv_b2)
         
-        Q = tf.matmul(h2, self.t_W3) + self.t_b3
+        conv_h2_flat = tf.reshape(conv_h2, [-1, 50*32])
+        
+        h1 = tf.nn.relu(tf.matmul(conv_h2_flat, self.t_W1) + self.t_b1)
+       
+        Q = tf.nn.relu(tf.matmul(h1, self.t_W2) + self.t_b2)
         
         return state, Q
     
     def assignTargetQ(self):
         assignment = []
+        assignment.append(self.t_conv_W1.assign(self.conv_W1))
+        assignment.append(self.t_conv_b1.assign(self.conv_b1))
+        assignment.append(self.t_conv_W2.assign(self.conv_W2))
+        assignment.append(self.t_conv_b2.assign(self.conv_b2))
         assignment.append(self.t_W1.assign(self.W1))
         assignment.append(self.t_b1.assign(self.b1))
         assignment.append(self.t_W2.assign(self.W2))
         assignment.append(self.t_b2.assign(self.b2))
-        assignment.append(self.t_W3.assign(self.W3))
-        assignment.append(self.t_b3.assign(self.b3))
         
         return assignment
     
@@ -172,4 +192,4 @@ class AGENT():
         self.saver.save(self.sess, "Tetris.ckpt")
         
     def restoreNetwork(self):
-        self.saver.restor(self.sess, "Tetris.ckpt")
+        self.saver.restore(self.sess, "Tetris.ckpt")
