@@ -1,10 +1,11 @@
 import random
 import numpy as np
 import tensorflow as tf
+from experience_buffer import BUFFER
 
 
 def weight_variable(shape, trainable = True):
-    initial = tf.truncated_normal(shape, stddev=0.03)
+    initial = tf.truncated_normal(shape, stddev=0.02)
     return tf.Variable(initial, trainable = trainable)
 
 def bias_variable(shape, trainable = True):
@@ -22,6 +23,7 @@ class AGENT():
         self.epsilon_decay_rate = epsilon_decay_rate
         self.is_resume = resume
         self.trajectory = []
+        self.buffer = BUFFER()
         
         self.conv_W1 = weight_variable([5, 5, 1, 16])
         self.conv_b1 = bias_variable([16])
@@ -100,11 +102,22 @@ class AGENT():
         r = np.array(self.trajectory[2])
         s_ = np.array(self.trajectory[3])
         
-        _, step_loss = self.sess.run([self.train, self.loss], feed_dict = {self.state: s,
-                                                                           self.act: a,
-                                                                           self.rwd: r,
-                                                                           self.next_state: s_})
-        return step_loss
+        self.buffer.saveExperince(s, a, r, s_)
+        experience = self.buffer.getRandomExperience()
+        if experience != None:
+            _, step_loss_1 = self.sess.run([self.train, self.loss], feed_dict = {self.state: experience[0][:127],
+                                                                               self.act: experience[1][:127],
+                                                                               self.rwd: experience[2][:127],
+                                                                               self.next_state: experience[3][:127]})
+            
+            _, step_loss_2 = self.sess.run([self.train, self.loss], feed_dict = {self.state: experience[0][128:],
+                                                                               self.act: experience[1][128:],
+                                                                               self.rwd: experience[2][128:],
+                                                                               self.next_state: experience[3][128:]})
+            
+            return step_loss_1 + step_loss_2
+        
+        return 0
     
     def getQFunction(self):
         state = tf.placeholder(tf.float32, [None, 200])

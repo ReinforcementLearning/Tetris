@@ -181,7 +181,7 @@ def main():
         else:
             pygame.mixer.music.load('tetrisc.mid')
         pygame.mixer.music.play(-1, 0.0)   
-        cur_score, loss_avg = runGame(agent)
+        cur_score, loss_avg, mean_reward = runGame(agent)
         
         # save agent's network
         agent.saveNetwork()
@@ -189,7 +189,7 @@ def main():
         showTextScreen('Game Over')
         episode += 1
         
-        print "Episode {} finished. score : {}, loss_avg = {}".format(episode, cur_score, loss_avg)
+        print "Episode {} finished. mean reward : {}, score : {}, loss_avg = {}".format(episode, mean_reward, cur_score, loss_avg)
         print agent.sess.run(agent.Q2, feed_dict = {agent.next_state : np.ones([1,200])})
         if episode % 25 == 0:
             agent.decayEpsilon()
@@ -206,6 +206,7 @@ def runGame(agent):
     score = 0
     reward = 0
     pre_reward = 0
+    total_reward = 0
     loss = 0
     step_size = 1
 
@@ -221,7 +222,7 @@ def runGame(agent):
             nextPiece = getNewPiece()
 
             if not isValidPosition(board, fallingPiece):
-                return score, loss/step_size # can't fit a new piece on the board, so game over
+                return score, loss/step_size, total_reward/step_size # can't fit a new piece on the board, so game over
 
         checkForQuit()
         
@@ -327,6 +328,7 @@ def runGame(agent):
         
         # reset reward
         pre_reward = reward
+        total_reward += reward
         reward = 0
         
         # training agent

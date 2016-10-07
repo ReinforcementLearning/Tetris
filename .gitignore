@@ -4,3 +4,4 @@ checkpoint
 *.project
 *.pydevproject
 *.python-version
+*.pyc
