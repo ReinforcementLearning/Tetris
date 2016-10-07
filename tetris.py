@@ -159,18 +159,22 @@ PIECES = {'S': S_SHAPE_TEMPLATE,
 
 def main():
     global FPSCLOCK, DISPLAYSURF, BASICFONT, BIGFONT
+    episode = 0
     
     # make agent for RL
     agent = AGENT()
     
     pygame.init()
     FPSCLOCK = pygame.time.Clock()
+    
+    
     DISPLAYSURF = pygame.display.set_mode((WINDOWWIDTH, WINDOWHEIGHT))
     BASICFONT = pygame.font.Font('freesansbold.ttf', 18)
     BIGFONT = pygame.font.Font('freesansbold.ttf', 100)
     pygame.display.set_caption('Tetromino')
-
     showTextScreen("RL_Code")
+    
+    
     while True: # game loop
         if random.randint(0, 1) == 0:
             pygame.mixer.music.load('tetrisb.mid')
@@ -182,8 +186,11 @@ def main():
         # save agent's network
         agent.saveNetwork()
         pygame.mixer.music.stop()
-        showTextScreen('Game Over')
-
+        
+        #showTextScreen('Game Over')
+        
+        print "Episode " + str(episode) + " finished." 
+        episode += 1
 
 def runGame(agent):
     # setup variables for the start of the game
@@ -219,8 +226,13 @@ def runGame(agent):
         
         # give state(s) for learning
         agent.giveState(board_copy)
-        action = agent.getAction(board_copy)
-        
+        x_, rot_ = agent.getAction(board_copy)
+        if (10 - x_ > TEMPLATEWIDTH):
+            x_ -= TEMPLATEWIDTH
+            
+        fallingPiece['x'] = x_
+        fallingPiece['rotation'] = (rot_ % len(PIECES[fallingPiece['shape']])) -1
+        """
         
         # event handling loop
         if action == "KEYUP":
@@ -239,7 +251,7 @@ def runGame(agent):
                 movingRight = False
             elif (action == "K_DOWN"):
                 movingDown = False
-
+                
         else:
             # moving the piece sideways
             if (action == "K_LEFT") and isValidPosition(board, fallingPiece, adjX=-1):
@@ -284,41 +296,52 @@ def runGame(agent):
         # handle moving the piece because of user input
         if (movingLeft or movingRight) and time.time() - lastMoveSidewaysTime > MOVESIDEWAYSFREQ:
             if movingLeft and isValidPosition(board, fallingPiece, adjX=-1):
-                fallingPiece['x'] -= 1
+                fallingPiece['x'] -= 3
             elif movingRight and isValidPosition(board, fallingPiece, adjX=1):
-                fallingPiece['x'] += 1
+                fallingPiece['x'] += 3
             lastMoveSidewaysTime = time.time()
 
         if movingDown and time.time() - lastMoveDownTime > MOVEDOWNFREQ and isValidPosition(board, fallingPiece, adjY=1):
             fallingPiece['y'] += 1
             lastMoveDownTime = time.time()
-        
+        """
         
         # let the piece fall if it is time to fall
-        if time.time() - lastFallTime > fallFreq:
-            # see if the piece has landed
+        #if time.time() - lastFallTime > fallFreq:    
+            # see if the piece has landed  
+        while True:
             if not isValidPosition(board, fallingPiece, adjY=1):
                 # falling piece has landed, set it on the board
                 addToBoard(board, fallingPiece)
-                reward = removeCompleteLines(board)
+                reward = (removeCompleteLines(board)**2)*10
                 score += reward
-                level, fallFreq = calculateLevelAndFallFreq(score)
+                #level, fallFreq = calculateLevelAndFallFreq(score)
                 fallingPiece = None
+                break
             else:
                 # piece did not land, just move the piece down
                 fallingPiece['y'] += 1
-                lastFallTime = time.time()
+                #lastFallTime = time.time()
                 
-        # give reward and next state(r,s') for learning
+        
         board_copy = deepcopy(board)
+        
+        
+        # get Score
+        reward += agent.getHeuristicScore(board_copy)
+        
+        # give reward and next state(r,s') for learning
         if fallingPiece != None:
             board_copy = addToBoard(board_copy, fallingPiece)
+        
         agent.giveNextState(board_copy, reward)
+        reward = 0
         
         # training agent
         agent.training()
         
         # drawing everything on the screen
+        
         DISPLAYSURF.fill(BGCOLOR)
         drawBoard(board)
         drawStatus(score, level)
@@ -327,8 +350,9 @@ def runGame(agent):
             drawPiece(fallingPiece)
 
         pygame.display.update()
+        """
         FPSCLOCK.tick(FPS)
-
+        """
 
 def makeTextObjs(text, font, color):
     surf = font.render(text, True, color)
@@ -388,7 +412,7 @@ def calculateLevelAndFallFreq(score):
     # Based on the score, return the level the player is on and
     # how many seconds pass until a falling piece falls one space.
     level = int(score / 10) + 1
-    fallFreq = 0.27 - (level * 0.02)
+    fallFreq = 0.05 - (level * 0.02)
     return level, fallFreq
 
 def getNewPiece():
