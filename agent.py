@@ -34,8 +34,7 @@ class AGENT():
             
         
     def getAction(self, board):
-        state = self.preprocessing(board)
-        state = np.reshape(state, [1, 200])
+        state = np.reshape(board, [1, 200])
         if self.epsilon > random.random():
             x_action = np.random.choice(10,1)[0]
             rot_action = np.random.choice(4,1)[0]
@@ -43,7 +42,7 @@ class AGENT():
             self.trajectory.append(rot_action)
             return x_action, rot_action
         else:    
-            x_Q_value, rot_Q_value = self.sess.run([self.x_Q1, self.rot_Q1], feed_dict = {self.state : state})
+            x_Q_value, rot_Q_value = self.sess.run([self.x_Q1, self.rot_Q1], feed_dict = {self.state: state})
             x_action = np.argmax(x_Q_value[0])
             rot_action = np.argmax(rot_Q_value[0])
             self.trajectory.append(x_action)

@@ -227,13 +227,14 @@ def runGame(agent):
         # give state(s) for learning
         agent.giveState(board_copy)
         x_, rot_ = agent.getAction(board_copy)
-        if (10 - x_ > TEMPLATEWIDTH):
+        if (x_ > TEMPLATEWIDTH):
+            print x_
             x_ -= TEMPLATEWIDTH
             
         fallingPiece['x'] = x_
         fallingPiece['rotation'] = (rot_ % len(PIECES[fallingPiece['shape']])) -1
-        """
         
+        """
         # event handling loop
         if action == "KEYUP":
             if (action == K_p):
@@ -315,7 +316,8 @@ def runGame(agent):
                 addToBoard(board, fallingPiece)
                 reward = (removeCompleteLines(board)**2)*10
                 score += reward
-                #level, fallFreq = calculateLevelAndFallFreq(score)
+                level, fallFreq = calculateLevelAndFallFreq(score)
+                fallingPiece['y'] -= 1
                 fallingPiece = None
                 break
             else:
