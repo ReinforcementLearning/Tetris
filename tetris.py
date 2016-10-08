@@ -227,9 +227,10 @@ def runGame(agent):
    
         agent.giveState(board_copy)
         x_, rot_ = agent.getAction(board_copy)
-        if ( x_ > TEMPLATEWIDTH):
-            x_ -= TEMPLATEWIDTH
-            
+        x_ -=1
+        if ( x_ +TEMPLATEWIDTH  > 10):
+            x_ = 8 - TEMPLATEWIDTH
+
         fallingPiece['x'] = x_
         fallingPiece['rotation'] = (rot_ % len(PIECES[fallingPiece['shape']])) -1
         """

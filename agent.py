@@ -41,6 +41,7 @@ class AGENT():
             rot_action = np.random.choice(4,1)[0]
             self.trajectory.append(x_action)
             self.trajectory.append(rot_action)
+            # print("through If -> x_  :",type(x_action),"\n")
             return x_action, rot_action
         else:    
             x_Q_value, rot_Q_value = self.sess.run([self.x_Q1, self.rot_Q1], feed_dict = {self.state : state})
@@ -48,6 +49,7 @@ class AGENT():
             rot_action = np.argmax(rot_Q_value[0])
             self.trajectory.append(x_action)
             self.trajectory.append(rot_action)
+            print("through else -> x_ :",type(x_action),"\n")
             return x_action, rot_action
         
         
