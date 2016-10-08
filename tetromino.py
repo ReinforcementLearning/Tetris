@@ -188,7 +188,6 @@ def main():
         episode += 1
         
         print "Episode {} finished. mean reward : {}, score : {}, loss_avg = {}".format(episode, mean_reward, cur_score, loss_avg)
-        #print agent.sess.run(agent.Q2, feed_dict = {agent.next_state : np.ones([1,200])})
 
 
 def runGame(agent):
@@ -314,11 +313,12 @@ def runGame(agent):
         # get Score
         reward += agent.getHeuristicScore(board_copy)
         
+        
         # give reward and next state(r,s') for learning
         if fallingPiece != None:
             board_copy = addToBoard(board_copy, fallingPiece)
         
-        agent.giveNextState(board_copy, reward - pre_reward)
+        #agent.giveNextState(board_copy, reward - pre_reward)
         
         # reset reward
         pre_reward = reward

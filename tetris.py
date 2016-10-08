@@ -176,17 +176,10 @@ def main():
     showTextScreen("RL_Code")
     """
     while True: # game loop
-        if random.randint(0, 1) == 0:
-            pygame.mixer.music.load('tetrisb.mid')
-        else:
-            pygame.mixer.music.load('tetrisc.mid')
-        pygame.mixer.music.play(-1, 0.0)   
         cur_score, loss_avg, mean_reward = runGame(agent)
         
         # save agent's network
         agent.saveNetwork()
-        pygame.mixer.music.stop()
-        #showTextScreen('Game Over')
         episode += 1
         
         print "Episode {} finished. mean_reward : {}, score : {}, loss_avg = {}".format(episode, mean_reward, cur_score, loss_avg)
@@ -213,8 +206,6 @@ def runGame(agent):
     nextPiece = getNewPiece()
 
     while True: # game loop
-        
-        
         if fallingPiece == None:
             # No falling piece in play, so start a new piece at the top
             fallingPiece = nextPiece
@@ -330,8 +321,11 @@ def runGame(agent):
         total_reward += reward
         reward = 0
         
+        
+        agent.saveTrajectory()
         # training agent
-        loss += agent.training()
+        if step_size % 10 == 0:
+            loss += agent.training()
         
         """
         # drawing everything on the screen
