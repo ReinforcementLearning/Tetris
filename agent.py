@@ -75,6 +75,7 @@ class AGENT():
     def giveState(self, board):
         state =  self.preprocessing(board)
         state = np.reshape(state, [1,200])
+        self.trajectory = []
         self.trajectory.append(state)
         
         
@@ -105,17 +106,13 @@ class AGENT():
         self.buffer.saveExperince(s, a, r, s_)
         experience = self.buffer.getRandomExperience()
         if experience != None:
-            _, step_loss_1 = self.sess.run([self.train, self.loss], feed_dict = {self.state: experience[0][:127],
-                                                                               self.act: experience[1][:127],
-                                                                               self.rwd: experience[2][:127],
-                                                                               self.next_state: experience[3][:127]})
+            _, step_loss, q = self.sess.run([self.train, self.loss, self.Q1], feed_dict = {self.state: experience[0],
+                                                                                           self.act: experience[1],
+                                                                                           self.rwd: experience[2],
+                                                                                           self.next_state: experience[3]})
             
-            _, step_loss_2 = self.sess.run([self.train, self.loss], feed_dict = {self.state: experience[0][128:],
-                                                                               self.act: experience[1][128:],
-                                                                               self.rwd: experience[2][128:],
-                                                                               self.next_state: experience[3][128:]})
-            
-            return step_loss_1 + step_loss_2
+            print "Q : " + str(q[0])
+            return step_loss
         
         return 0
     
@@ -130,7 +127,7 @@ class AGENT():
         
         h1 = tf.nn.relu(tf.matmul(conv_h2_flat, self.W1) + self.b1)
        
-        Q = tf.nn.relu(tf.matmul(h1, self.W2) + self.b2)
+        Q = tf.matmul(h1, self.W2) + self.b2
         
         
         return state, Q
@@ -141,7 +138,7 @@ class AGENT():
         
         values1 = tf.reduce_sum(tf.mul(self.Q1, act), reduction_indices = 1)
         values2 = rwd + self.gamma * tf.reduce_max(self.Q2, reduction_indices = 1)
-        loss = tf.reduce_mean(tf.clip_by_value(tf.square(values1 - values2), 1e-10, 1.0))
+        loss = tf.reduce_mean(tf.square(values1 - values2))
         train_step = tf.train.AdamOptimizer(self.LR).minimize(loss)       
         
         self.trajectory = []
@@ -176,7 +173,7 @@ class AGENT():
         
         h1 = tf.nn.relu(tf.matmul(conv_h2_flat, self.t_W1) + self.t_b1)
        
-        Q = tf.nn.relu(tf.matmul(h1, self.t_W2) + self.t_b2)
+        Q = tf.matmul(h1, self.t_W2) + self.t_b2
         
         return state, Q
     

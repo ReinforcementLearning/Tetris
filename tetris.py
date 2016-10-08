@@ -167,14 +167,14 @@ def main():
     agent = AGENT(resume = False)
     
     pygame.init()
-    
+    """
     FPSCLOCK = pygame.time.Clock()
     DISPLAYSURF = pygame.display.set_mode((WINDOWWIDTH, WINDOWHEIGHT))
     BASICFONT = pygame.font.Font('freesansbold.ttf', 18)
     BIGFONT = pygame.font.Font('freesansbold.ttf', 100)
     pygame.display.set_caption('Tetromino')
     showTextScreen("RL_Code")
-    
+    """
     while True: # game loop
         if random.randint(0, 1) == 0:
             pygame.mixer.music.load('tetrisb.mid')
@@ -184,14 +184,14 @@ def main():
         cur_score, loss_avg, mean_reward = runGame(agent)
         
         # save agent's network
-        agent.saveNetwork()
+        #agent.saveNetwork()
         pygame.mixer.music.stop()
-        showTextScreen('Game Over')
+        #showTextScreen('Game Over')
         episode += 1
         
         print "Episode {} finished. mean reward : {}, score : {}, loss_avg = {}".format(episode, mean_reward, cur_score, loss_avg)
-        print agent.sess.run(agent.Q2, feed_dict = {agent.next_state : np.ones([1,200])})
-        if episode % 25 == 0:
+        #print agent.sess.run(agent.Q2, feed_dict = {agent.next_state : np.ones([1,200])})
+        if episode % 50 == 0:
             agent.decayEpsilon()
             
             if episode % 500 == 0:
@@ -334,7 +334,7 @@ def runGame(agent):
         # training agent
         loss += agent.training()
         
-        
+        """
         # drawing everything on the screen
         DISPLAYSURF.fill(BGCOLOR)
         drawBoard(board)
@@ -345,7 +345,7 @@ def runGame(agent):
 
         pygame.display.update()
         FPSCLOCK.tick()
-        
+        """
         step_size += 1
 
 

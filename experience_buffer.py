@@ -1,7 +1,7 @@
 import numpy as np
 
 class BUFFER():
-    def __init__(self, buffer_size = 5000, batch_size = 256):
+    def __init__(self, buffer_size = 10000, batch_size = 128):
         self.buffer_size = buffer_size
         self.batch_size = batch_size
         self.states = np.empty([buffer_size, 200])
