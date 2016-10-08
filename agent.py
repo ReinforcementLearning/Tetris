@@ -13,7 +13,7 @@ def bias_variable(shape, trainable = True):
     return tf.Variable(initial, trainable = trainable)
 
 class AGENT():
-    def __init__(self, gamma = 0.99, LR = 0.01, epsilon = 0.9, epsilon_thres = 1e-4, epsilon_decay_rate = 0.99, 
+    def __init__(self, gamma = 0.99, LR = 0.001, epsilon = 0.99, epsilon_thres = 1e-4, epsilon_decay_rate = 0.99, 
                  resume = False):
         self.actions = ["KEYUP", "K_UP", "K_DOWN", "K_LEFT", "K_RIGHT"]
         self.gamma = gamma
@@ -106,12 +106,11 @@ class AGENT():
         self.buffer.saveExperince(s, a, r, s_)
         experience = self.buffer.getRandomExperience()
         if experience != None:
-            _, step_loss, q = self.sess.run([self.train, self.loss, self.Q1], feed_dict = {self.state: experience[0],
+            _, step_loss = self.sess.run([self.train, self.loss], feed_dict = {self.state: experience[0],
                                                                                            self.act: experience[1],
                                                                                            self.rwd: experience[2],
                                                                                            self.next_state: experience[3]})
             
-            print "Q : " + str(q[0])
             return step_loss
         
         return 0

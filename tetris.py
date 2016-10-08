@@ -184,13 +184,12 @@ def main():
         cur_score, loss_avg, mean_reward = runGame(agent)
         
         # save agent's network
-        #agent.saveNetwork()
+        agent.saveNetwork()
         pygame.mixer.music.stop()
         #showTextScreen('Game Over')
         episode += 1
         
-        print "Episode {} finished. mean reward : {}, score : {}, loss_avg = {}".format(episode, mean_reward, cur_score, loss_avg)
-        #print agent.sess.run(agent.Q2, feed_dict = {agent.next_state : np.ones([1,200])})
+        print "Episode {} finished. mean_reward : {}, score : {}, loss_avg = {}".format(episode, mean_reward, cur_score, loss_avg)
         if episode % 50 == 0:
             agent.decayEpsilon()
             

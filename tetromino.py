@@ -164,7 +164,7 @@ def main():
     episode, cur_score = 0, 0
     
     # make agent for RL
-    agent = AGENT(resume = True, epsilon = 0.1)
+    agent = AGENT(resume = True, epsilon = 0.001)
     
     pygame.init()
     
