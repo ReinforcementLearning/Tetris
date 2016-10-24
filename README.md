@@ -5,10 +5,10 @@
 유명하고 간단한 그러나 학습하기에는 쉽지 않은 Tetris를 학습시켜봄으로서 강화학습 알고리즘의 적용과 구현에 대한 능력을 키운다
   
 ###현재까지 진행상황  
-DQN을 이용해서 Tetris Agent를 만듬.  
+기존의 Tetromino라는 Pygame 코드에다가 학습을 위해 Deep Q-Networks(DQN)을 이용해서 Tetris Agent를 만들었다  
 
 CNN, Target Q, Experience Replay 모두 구현.  
-네트워크나 Experience Buffer크기나 여러 hyperparameter들을 세부조정만 하면 될 것 같습니다.  
+네트워크나 Experience Buffer크기나 여러 hyperparamete다r들을 세부조정만 하면 될 것 같습니다.  
 
 ####문제점
 1. loss가 줄지 않는다.  
